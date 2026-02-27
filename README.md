@@ -118,7 +118,6 @@ GET http://localhost:8080/abc123
 curl -X POST "http://localhost:8081/api/links" \
   -H "Content-Type: application/json" \
   -d '{
-    "code": "abc123",
     "originalUrl": "https://www.example.com",
     "status": 1
   }'
@@ -134,12 +133,12 @@ curl -X POST "http://localhost:8081/api/links" \
 ## 开发说明
 
 - 当前统计逻辑以 Redis 计数为主，后续可通过定时任务回刷 MySQL
-- 短链码目前依赖调用方提供，可扩展为自动生成策略
+- 短链码已改为服务端 Base62 自动生成（含冲突重试）
 - 目前为 API 工程，未包含前端管理界面
 
 ## Roadmap
 
-- [ ] 自动生成短链码（Base62/雪花 ID 等）
+- [x] 自动生成短链码（Base62）
 - [ ] 按天统计访问数据（例如 `short_link_stats_daily`）
 - [ ] Redis 增量异步回刷 MySQL
 - [ ] 后台登录与权限体系

@@ -121,7 +121,7 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         try {
             return objectMapper.writeValueAsString(link);
         } catch (JsonProcessingException e) {
-            throw new BizException(ERROR_CODE_INTERNAL, "短链缓存序列化失败");
+            throw new BizException(ERROR_CODE_INTERNAL, "短链缓存序列化失败", e);
         }
     }
 

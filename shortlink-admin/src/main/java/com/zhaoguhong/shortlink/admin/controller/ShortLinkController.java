@@ -1,12 +1,18 @@
 package com.zhaoguhong.shortlink.admin.controller;
 
 import com.zhaoguhong.shortlink.admin.entity.ShortLink;
+import com.zhaoguhong.shortlink.admin.generator.ShortCodeGenerator;
 import com.zhaoguhong.shortlink.admin.mapper.ShortLinkMapper;
+import com.zhaoguhong.shortlink.common.exception.BizException;
 import com.zhaoguhong.shortlink.common.web.ApiResponse;
 import jakarta.validation.Valid;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 
 /**
@@ -20,36 +26,53 @@ import java.util.List;
 public class ShortLinkController {
 
     private static final int DEFAULT_LINK_STATUS = 1;
+    private static final int ERROR_CODE_BAD_REQUEST = 400;
+    private static final int ERROR_CODE_NOT_FOUND = 404;
+    private static final int ERROR_CODE_INTERNAL = 500;
+    private static final int CODE_GENERATE_MAX_RETRY = 8;
 
     private final ShortLinkMapper shortLinkMapper;
+    private final ShortCodeGenerator shortCodeGenerator;
 
-    public ShortLinkController(ShortLinkMapper shortLinkMapper) {
+    public ShortLinkController(ShortLinkMapper shortLinkMapper, ShortCodeGenerator shortCodeGenerator) {
         this.shortLinkMapper = shortLinkMapper;
+        this.shortCodeGenerator = shortCodeGenerator;
     }
 
     @PostMapping
     public ApiResponse<ShortLink> create(@Valid @RequestBody ShortLink link) {
+        validateUrl(link.getOriginalUrl());
         link.setStatus(ObjectUtils.defaultIfNull(link.getStatus(), DEFAULT_LINK_STATUS));
-        shortLinkMapper.insert(link);
+        createWithGeneratedCode(link);
         return ApiResponse.success(link);
     }
 
     @PutMapping("/{id}")
     public ApiResponse<ShortLink> update(@PathVariable("id") Long id, @Valid @RequestBody ShortLink link) {
+        validateUrl(link.getOriginalUrl());
         link.setId(id);
-        shortLinkMapper.update(link);
+        int affectedRows = shortLinkMapper.update(link);
+        if (affectedRows == 0) {
+            throw new BizException(ERROR_CODE_NOT_FOUND, "短链不存在");
+        }
         return ApiResponse.success(link);
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable("id") Long id) {
-        shortLinkMapper.delete(id);
+        int affectedRows = shortLinkMapper.delete(id);
+        if (affectedRows == 0) {
+            throw new BizException(ERROR_CODE_NOT_FOUND, "短链不存在");
+        }
         return ApiResponse.success();
     }
 
     @GetMapping("/{id}")
     public ApiResponse<ShortLink> detail(@PathVariable("id") Long id) {
         ShortLink link = shortLinkMapper.findById(id);
+        if (link == null) {
+            throw new BizException(ERROR_CODE_NOT_FOUND, "短链不存在");
+        }
         return ApiResponse.success(link);
     }
 
@@ -57,5 +80,33 @@ public class ShortLinkController {
     public ApiResponse<List<ShortLink>> list() {
         List<ShortLink> list = shortLinkMapper.findAll();
         return ApiResponse.success(list);
+    }
+
+    private void validateUrl(String url) {
+        if (StringUtils.isBlank(url)) {
+            throw new BizException(ERROR_CODE_BAD_REQUEST, "原始链接不能为空");
+        }
+        try {
+            URI uri = new URI(url);
+            String scheme = uri.getScheme();
+            if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+                throw new BizException(ERROR_CODE_BAD_REQUEST, "原始链接协议仅支持 http/https");
+            }
+        } catch (URISyntaxException e) {
+            throw new BizException(ERROR_CODE_BAD_REQUEST, "原始链接格式非法", e);
+        }
+    }
+
+    private void createWithGeneratedCode(ShortLink link) {
+        for (int i = 0; i < CODE_GENERATE_MAX_RETRY; i++) {
+            link.setCode(shortCodeGenerator.generate());
+            try {
+                shortLinkMapper.insert(link);
+                return;
+            } catch (DuplicateKeyException ignored) {
+                // 短码冲突时重试，避免唯一索引冲突导致创建失败。
+            }
+        }
+        throw new BizException(ERROR_CODE_INTERNAL, "短链码生成失败，请稍后重试");
     }
 }
