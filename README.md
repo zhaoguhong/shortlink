@@ -114,15 +114,14 @@ GET http://localhost:8080/abc123
 
 创建示例：
 
-```http
-POST http://localhost:8081/api/links
-Content-Type: application/json
-
-{
-  "code": "abc123",
-  "originalUrl": "https://www.example.com",
-  "status": 1
-}
+```bash
+curl -X POST "http://localhost:8081/api/links" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "abc123",
+    "originalUrl": "https://www.example.com",
+    "status": 1
+  }'
 ```
 
 ## 数据模型
