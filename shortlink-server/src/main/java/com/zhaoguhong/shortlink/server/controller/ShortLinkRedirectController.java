@@ -4,6 +4,7 @@ import com.zhaoguhong.shortlink.server.entity.ShortLink;
 import com.zhaoguhong.shortlink.server.service.ShortLinkService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +36,6 @@ public class ShortLinkRedirectController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.LOCATION, link.getOriginalUrl());
-        return ResponseEntity.status(302).headers(headers).build();
+        return ResponseEntity.status(HttpStatus.FOUND).headers(headers).build();
     }
 }

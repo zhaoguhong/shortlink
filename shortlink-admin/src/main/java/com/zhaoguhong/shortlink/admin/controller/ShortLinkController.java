@@ -4,6 +4,7 @@ import com.zhaoguhong.shortlink.admin.entity.ShortLink;
 import com.zhaoguhong.shortlink.admin.mapper.ShortLinkMapper;
 import com.zhaoguhong.shortlink.common.web.ApiResponse;
 import jakarta.validation.Valid;
+import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,8 @@ import java.util.List;
 @RequestMapping("/api/links")
 public class ShortLinkController {
 
+    private static final int DEFAULT_LINK_STATUS = 1;
+
     private final ShortLinkMapper shortLinkMapper;
 
     public ShortLinkController(ShortLinkMapper shortLinkMapper) {
@@ -26,9 +29,7 @@ public class ShortLinkController {
 
     @PostMapping
     public ApiResponse<ShortLink> create(@Valid @RequestBody ShortLink link) {
-        if (link.getStatus() == null) {
-            link.setStatus(1);
-        }
+        link.setStatus(ObjectUtils.defaultIfNull(link.getStatus(), DEFAULT_LINK_STATUS));
         shortLinkMapper.insert(link);
         return ApiResponse.success(link);
     }
