@@ -107,8 +107,8 @@ GET http://localhost:8080/abc123
 ### shortlink-admin
 
 - `POST /api/links`：创建短链
-- `PUT /api/links/{id}`：更新短链
-- `DELETE /api/links/{id}`：删除短链
+- `POST /api/links/{id}/update`：更新短链
+- `POST /api/links/{id}/delete`：删除短链
 - `GET /api/links/{id}`：查询详情
 - `GET /api/links`：查询列表
 

@@ -4,15 +4,13 @@ import com.zhaoguhong.shortlink.admin.entity.ShortLink;
 import com.zhaoguhong.shortlink.admin.generator.ShortCodeGenerator;
 import com.zhaoguhong.shortlink.admin.mapper.ShortLinkMapper;
 import com.zhaoguhong.shortlink.common.exception.BizException;
+import com.zhaoguhong.shortlink.common.util.UrlValidationUtils;
 import com.zhaoguhong.shortlink.common.web.ApiResponse;
 import jakarta.validation.Valid;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 
 /**
@@ -47,7 +45,7 @@ public class ShortLinkController {
         return ApiResponse.success(link);
     }
 
-    @PutMapping("/{id}")
+    @PostMapping("/{id}/update")
     public ApiResponse<ShortLink> update(@PathVariable("id") Long id, @Valid @RequestBody ShortLink link) {
         validateUrl(link.getOriginalUrl());
         link.setId(id);
@@ -58,7 +56,7 @@ public class ShortLinkController {
         return ApiResponse.success(link);
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/{id}/delete")
     public ApiResponse<Void> delete(@PathVariable("id") Long id) {
         int affectedRows = shortLinkMapper.delete(id);
         if (affectedRows == 0) {
@@ -83,17 +81,11 @@ public class ShortLinkController {
     }
 
     private void validateUrl(String url) {
-        if (StringUtils.isBlank(url)) {
+        if (url == null || url.trim().isEmpty()) {
             throw new BizException(ERROR_CODE_BAD_REQUEST, "原始链接不能为空");
         }
-        try {
-            URI uri = new URI(url);
-            String scheme = uri.getScheme();
-            if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-                throw new BizException(ERROR_CODE_BAD_REQUEST, "原始链接协议仅支持 http/https");
-            }
-        } catch (URISyntaxException e) {
-            throw new BizException(ERROR_CODE_BAD_REQUEST, "原始链接格式非法", e);
+        if (!UrlValidationUtils.isValidHttpOrHttpsUrl(url)) {
+            throw new BizException(ERROR_CODE_BAD_REQUEST, "原始链接格式非法，仅支持 http/https");
         }
     }
 
