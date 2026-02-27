@@ -1,0 +1,11 @@
+/target/
+**/target/
+
+# IntelliJ / Cursor / VSCode
+.idea/
+.cursor/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
