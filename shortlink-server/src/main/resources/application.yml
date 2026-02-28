@@ -17,3 +17,10 @@ spring:
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
+
+shortlink:
+  cache:
+    # 正常短链缓存TTL（秒），小于等于0表示禁用正常短链缓存。
+    code-ttl-seconds: 1800
+    # 空值缓存TTL（秒），小于等于0表示禁用空值缓存。
+    null-ttl-seconds: 120

@@ -7,6 +7,9 @@ import com.zhaoguhong.shortlink.server.entity.ShortLink;
 import com.zhaoguhong.shortlink.server.mapper.ShortLinkMapper;
 import com.zhaoguhong.shortlink.server.service.ShortLinkService;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
@@ -24,19 +27,23 @@ import java.time.LocalDateTime;
  */
 @Service
 public class ShortLinkServiceImpl implements ShortLinkService {
+    private static final Logger log = LoggerFactory.getLogger(ShortLinkServiceImpl.class);
 
     private static final String CODE_CACHE_PREFIX = "shortlink:code:";
-    private static final Duration CODE_CACHE_TTL = Duration.ofMinutes(30);
+    private static final String CODE_CACHE_NULL_VALUE = "__NULL__";
     private static final Duration UV_KEY_TTL = Duration.ofDays(7);
     private static final int LINK_STATUS_DISABLED = 0;
-    private static final int ERROR_CODE_NOT_FOUND = 404;
-    private static final int ERROR_CODE_FORBIDDEN = 403;
-    private static final int ERROR_CODE_GONE = 410;
     private static final int ERROR_CODE_INTERNAL = 500;
 
     private final ShortLinkMapper shortLinkMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
+    /** 正常短链缓存TTL（秒），小于等于0表示禁用正常短链缓存。 */
+    @Value("${shortlink.cache.code-ttl-seconds:1800}")
+    private long codeCacheTtlSeconds;
+    /** 空值缓存TTL（秒），小于等于0表示禁用空值缓存。 */
+    @Value("${shortlink.cache.null-ttl-seconds:120}")
+    private long codeCacheNullTtlSeconds;
 
     public ShortLinkServiceImpl(ShortLinkMapper shortLinkMapper,
                                 StringRedisTemplate stringRedisTemplate,
@@ -49,23 +56,45 @@ public class ShortLinkServiceImpl implements ShortLinkService {
     @Override
     public ShortLink getByCode(String code) {
         String cacheKey = CODE_CACHE_PREFIX + code;
-        String cached = stringRedisTemplate.opsForValue().get(cacheKey);
-        if (StringUtils.isNotEmpty(cached)) {
-            ShortLink cachedLink = deserializeLink(cached, cacheKey);
-            if (cachedLink != null) {
-                validateLink(cachedLink, true, cacheKey);
-                return cachedLink;
-            }
+        ShortLink cachedLink = getLinkFromCache(code, cacheKey);
+        if (cachedLink != null) {
+            return cachedLink;
         }
 
         ShortLink link = shortLinkMapper.findByCode(code);
-        validateLink(link, false, cacheKey);
+        link = validateAndGetValidLink(link);
+        if (link == null) {
+            // 空值短缓存，降低恶意/高频不存在短码请求对数据库的穿透压力。
+            if (codeCacheNullTtlSeconds > 0) {
+                stringRedisTemplate.opsForValue().set(
+                        cacheKey,
+                        CODE_CACHE_NULL_VALUE,
+                        Duration.ofSeconds(codeCacheNullTtlSeconds)
+                );
+            }
+            return null;
+        }
 
         Duration ttl = resolveCacheTtl(link);
         if (!ttl.isZero() && !ttl.isNegative()) {
             stringRedisTemplate.opsForValue().set(cacheKey, serializeLink(link), ttl);
         }
         return link;
+    }
+
+    private ShortLink getLinkFromCache(String code, String cacheKey) {
+        String cached = stringRedisTemplate.opsForValue().get(cacheKey);
+        if (CODE_CACHE_NULL_VALUE.equals(cached) || StringUtils.isEmpty(cached)) {
+            return null;
+        }
+        try {
+            ShortLink cachedLink = objectMapper.readValue(cached, ShortLink.class);
+            return validateAndGetValidLink(cachedLink);
+        } catch (Exception e) {
+            log.warn("deserialize short link cache failed, code={}", code, e);
+            stringRedisTemplate.delete(cacheKey);
+            return null;
+        }
     }
 
     @Override
@@ -88,32 +117,33 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         stringRedisTemplate.opsForValue().set(recentKey, LocalDateTime.now().toString());
     }
 
-    private void validateLink(ShortLink link, boolean fromCache, String cacheKey) {
+    private ShortLink validateAndGetValidLink(ShortLink link) {
         if (link == null) {
-            throw new BizException(ERROR_CODE_NOT_FOUND, "短链不存在");
+            return null;
         }
         LocalDateTime now = LocalDateTime.now();
         if (link.getStatus() != null && link.getStatus() == LINK_STATUS_DISABLED) {
-            throw new BizException(ERROR_CODE_FORBIDDEN, "短链已被禁用");
+            return null;
         }
         if (link.getExpireTime() != null && link.getExpireTime().isBefore(now)) {
-            if (fromCache) {
-                stringRedisTemplate.delete(cacheKey);
-            }
-            throw new BizException(ERROR_CODE_GONE, "短链已过期");
+            return null;
         }
+        return link;
     }
 
     private Duration resolveCacheTtl(ShortLink link) {
+        if (codeCacheTtlSeconds <= 0) {
+            return Duration.ZERO;
+        }
+        long defaultSeconds = codeCacheTtlSeconds;
         if (link.getExpireTime() == null) {
-            return CODE_CACHE_TTL;
+            return Duration.ofSeconds(defaultSeconds);
         }
         LocalDateTime now = LocalDateTime.now();
         long secondsLeft = Duration.between(now, link.getExpireTime()).getSeconds();
         if (secondsLeft <= 0) {
             return Duration.ZERO;
         }
-        long defaultSeconds = CODE_CACHE_TTL.getSeconds();
         return Duration.ofSeconds(Math.min(secondsLeft, defaultSeconds));
     }
 
@@ -125,12 +155,4 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         }
     }
 
-    private ShortLink deserializeLink(String cached, String cacheKey) {
-        try {
-            return objectMapper.readValue(cached, ShortLink.class);
-        } catch (Exception e) {
-            stringRedisTemplate.delete(cacheKey);
-            return null;
-        }
-    }
 }

@@ -14,7 +14,7 @@ public interface ShortLinkService {
      * 根据短码查询短链信息。
      *
      * @param code 短码
-     * @return 短链实体
+     * @return 短链实体，不存在/禁用/过期时返回null
      */
     ShortLink getByCode(String code);
 

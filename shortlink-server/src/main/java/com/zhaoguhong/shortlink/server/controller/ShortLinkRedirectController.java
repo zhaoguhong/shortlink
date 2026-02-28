@@ -32,6 +32,9 @@ public class ShortLinkRedirectController {
     @GetMapping("/{code}")
     public ResponseEntity<Void> redirect(@PathVariable("code") String code, HttpServletRequest request) {
         ShortLink link = shortLinkService.getByCode(code);
+        if (link == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
 
         String ip = request.getRemoteAddr();
         String ua = request.getHeader("User-Agent");
