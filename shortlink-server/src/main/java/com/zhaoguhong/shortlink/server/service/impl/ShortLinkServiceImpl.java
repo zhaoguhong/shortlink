@@ -1,8 +1,5 @@
 package com.zhaoguhong.shortlink.server.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zhaoguhong.shortlink.common.exception.BizException;
 import com.zhaoguhong.shortlink.server.entity.ShortLink;
 import com.zhaoguhong.shortlink.server.mapper.ShortLinkMapper;
 import com.zhaoguhong.shortlink.server.service.ShortLinkService;
@@ -10,7 +7,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
@@ -30,14 +29,15 @@ public class ShortLinkServiceImpl implements ShortLinkService {
     private static final Logger log = LoggerFactory.getLogger(ShortLinkServiceImpl.class);
 
     private static final String CODE_CACHE_PREFIX = "shortlink:code:";
-    private static final String CODE_CACHE_NULL_VALUE = "__NULL__";
+    private static final Long NULL_LINK_ID = -1L;
+    private static final String NULL_LINK_CODE = "__NULL__";
+    private static final ShortLink NULL_LINK_MARKER = buildNullLinkMarker();
     private static final Duration UV_KEY_TTL = Duration.ofDays(7);
     private static final int LINK_STATUS_DISABLED = 0;
-    private static final int ERROR_CODE_INTERNAL = 500;
 
     private final ShortLinkMapper shortLinkMapper;
     private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
+    private final RedisTemplate<String, ShortLink> shortLinkRedisTemplate;
     /** 正常短链缓存TTL（秒），小于等于0表示禁用正常短链缓存。 */
     @Value("${shortlink.cache.code-ttl-seconds:1800}")
     private long codeCacheTtlSeconds;
@@ -47,54 +47,87 @@ public class ShortLinkServiceImpl implements ShortLinkService {
 
     public ShortLinkServiceImpl(ShortLinkMapper shortLinkMapper,
                                 StringRedisTemplate stringRedisTemplate,
-                                ObjectMapper objectMapper) {
+                                RedisTemplate<String, ShortLink> shortLinkRedisTemplate) {
         this.shortLinkMapper = shortLinkMapper;
         this.stringRedisTemplate = stringRedisTemplate;
-        this.objectMapper = objectMapper;
+        this.shortLinkRedisTemplate = shortLinkRedisTemplate;
     }
 
     @Override
     public ShortLink getByCode(String code) {
         String cacheKey = CODE_CACHE_PREFIX + code;
-        ShortLink cachedLink = getLinkFromCache(code, cacheKey);
-        if (cachedLink != null) {
-            return cachedLink;
-        }
-
-        ShortLink link = shortLinkMapper.findByCode(code);
-        link = validateAndGetValidLink(link);
-        if (link == null) {
-            // 空值短缓存，降低恶意/高频不存在短码请求对数据库的穿透压力。
-            if (codeCacheNullTtlSeconds > 0) {
-                stringRedisTemplate.opsForValue().set(
-                        cacheKey,
-                        CODE_CACHE_NULL_VALUE,
-                        Duration.ofSeconds(codeCacheNullTtlSeconds)
-                );
+        ShortLink link = getLinkFromCache(code, cacheKey);
+        if (link != null) {
+            if (isNullLinkMarker(link)) {
+                return null;
             }
+            return isLinkValid(link) ? link : null;
+        }
+        link = shortLinkMapper.findByCode(code);
+        if (isLinkValid(link)) {
+            cacheLink(cacheKey, link);
+            return link;
+        } else {
+            cacheNullLink(cacheKey);
             return null;
         }
-
-        Duration ttl = resolveCacheTtl(link);
-        if (!ttl.isZero() && !ttl.isNegative()) {
-            stringRedisTemplate.opsForValue().set(cacheKey, serializeLink(link), ttl);
-        }
-        return link;
     }
 
     private ShortLink getLinkFromCache(String code, String cacheKey) {
-        String cached = stringRedisTemplate.opsForValue().get(cacheKey);
-        if (CODE_CACHE_NULL_VALUE.equals(cached) || StringUtils.isEmpty(cached)) {
-            return null;
-        }
         try {
-            ShortLink cachedLink = objectMapper.readValue(cached, ShortLink.class);
-            return validateAndGetValidLink(cachedLink);
-        } catch (Exception e) {
+            return shortLinkRedisTemplate.opsForValue().get(cacheKey);
+        } catch (SerializationException e) {
             log.warn("deserialize short link cache failed, code={}", code, e);
-            stringRedisTemplate.delete(cacheKey);
+            try {
+                shortLinkRedisTemplate.delete(cacheKey);
+            } catch (Exception deleteException) {
+                log.warn("delete corrupted short link cache failed, code={}", code, deleteException);
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("read short link cache failed, code={}", code, e);
             return null;
         }
+    }
+
+    private boolean isNullLinkMarker(ShortLink link) {
+        return link != null && NULL_LINK_ID.equals(link.getId()) && NULL_LINK_CODE.equals(link.getCode());
+    }
+
+    private static ShortLink buildNullLinkMarker() {
+        ShortLink marker = new ShortLink();
+        marker.setId(NULL_LINK_ID);
+        marker.setCode(NULL_LINK_CODE);
+        return marker;
+    }
+
+    private void cacheNullLink(String cacheKey) {
+        // 空值短缓存，降低恶意/高频不存在短码请求对数据库的穿透压力。
+        if (codeCacheNullTtlSeconds > 0) {
+            shortLinkRedisTemplate.opsForValue().set(
+                    cacheKey,
+                    NULL_LINK_MARKER,
+                    Duration.ofSeconds(codeCacheNullTtlSeconds)
+            );
+        }
+    }
+
+    private void cacheLink(String cacheKey, ShortLink link) {
+        if (codeCacheTtlSeconds <= 0) {
+            return;
+        }
+        Duration ttl;
+        if (link.getExpireTime() == null) {
+            ttl = Duration.ofSeconds(codeCacheTtlSeconds);
+        } else {
+            LocalDateTime now = LocalDateTime.now();
+            long secondsLeft = Duration.between(now, link.getExpireTime()).getSeconds();
+            if (secondsLeft <= 0) {
+                return;
+            }
+            ttl = Duration.ofSeconds(Math.min(secondsLeft, codeCacheTtlSeconds));
+        }
+        shortLinkRedisTemplate.opsForValue().set(cacheKey, link, ttl);
     }
 
     @Override
@@ -117,42 +150,18 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         stringRedisTemplate.opsForValue().set(recentKey, LocalDateTime.now().toString());
     }
 
-    private ShortLink validateAndGetValidLink(ShortLink link) {
+    private boolean isLinkValid(ShortLink link) {
         if (link == null) {
-            return null;
+            return false;
         }
         LocalDateTime now = LocalDateTime.now();
         if (link.getStatus() != null && link.getStatus() == LINK_STATUS_DISABLED) {
-            return null;
+            return false;
         }
         if (link.getExpireTime() != null && link.getExpireTime().isBefore(now)) {
-            return null;
+            return false;
         }
-        return link;
-    }
-
-    private Duration resolveCacheTtl(ShortLink link) {
-        if (codeCacheTtlSeconds <= 0) {
-            return Duration.ZERO;
-        }
-        long defaultSeconds = codeCacheTtlSeconds;
-        if (link.getExpireTime() == null) {
-            return Duration.ofSeconds(defaultSeconds);
-        }
-        LocalDateTime now = LocalDateTime.now();
-        long secondsLeft = Duration.between(now, link.getExpireTime()).getSeconds();
-        if (secondsLeft <= 0) {
-            return Duration.ZERO;
-        }
-        return Duration.ofSeconds(Math.min(secondsLeft, defaultSeconds));
-    }
-
-    private String serializeLink(ShortLink link) {
-        try {
-            return objectMapper.writeValueAsString(link);
-        } catch (JsonProcessingException e) {
-            throw new BizException(ERROR_CODE_INTERNAL, "短链缓存序列化失败", e);
-        }
+        return true;
     }
 
 }
