@@ -1,6 +1,52 @@
 # shortlink
 
-基于 **Spring Boot 3 + MyBatis + MySQL + Redis** 的短链接服务，采用多模块 Maven 结构，包含短链创建、重定向和访问统计能力。
+[![Java](https://img.shields.io/badge/Java-17-blue)](https://adoptium.net/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3.4-6DB33F)](https://spring.io/projects/spring-boot)
+[![License](https://img.shields.io/badge/License-Apache--2.0-orange)](./LICENSE)
+
+短链（Short URL）是把一个很长的原始链接压缩成一个更短、可读性更好的链接。  
+用户访问短链时，服务端会把它重定向到原始地址，同时可以记录访问数据（如 PV、UV）。
+
+这个项目是一个基于 **Spring Boot 3 + MyBatis + MySQL + Redis** 的短链系统示例，采用多模块 Maven 结构，包含短链创建、重定向和访问统计能力。
+
+## 核心能力与亮点
+
+- 分层清晰：访问服务与管理服务分离，便于独立扩展
+- 管理端 CRUD：创建、更新、删除、查询短链
+- 短链重定向：`GET /{code}` 返回 `302 Found`
+- 策略化短码生成：支持 Redis Base62 / MurmurHash，可按配置切换，并支持冲突重试
+- 访问统计：记录 PV、UV（基于 `IP + User-Agent`）和最近访问时间
+- 缓存友好：正常缓存 + 空值缓存，降低数据库压力
+- 易于上手：提供完整 `schema.sql`、配置说明和启动命令
+
+## 架构概览
+
+```text
+Client
+  | 1) POST /api/links
+  v
+shortlink-admin (8081)
+  |-- 写入 MySQL (short_link)
+  |-- 生成短码 (strategy)
+  `-- 维护统计元信息
+
+Client
+  | 2) GET /{code}
+  v
+shortlink-server (8080)
+  |-- 优先读 Redis 缓存
+  |-- 未命中回源 MySQL
+  `-- 302 重定向到 originalUrl
+```
+
+## 什么是短链
+
+常见的短链使用场景包括：
+
+- 分享链接时减少长度，提升美观和可传播性
+- 在短信、海报、社媒等场景节省字符空间
+- 在不暴露原始链接的情况下统一管理跳转目标
+- 统计访问效果（例如访问量、访客数、最近访问时间）
 
 ## 模块说明
 
@@ -9,35 +55,9 @@
 - `shortlink-common`：公共模块（统一返回体、异常处理等）
 - `schema.sql`：数据库初始化脚本
 
-## 技术栈
-
-- JDK 17
-- Spring Boot 3.3.4
-- MyBatis
-- MySQL 8.x
-- Redis 6.x+
-- Maven 3.8+
-
-## 核心能力
-
-- 短链重定向：`GET /{code}` 返回 `302 Found`
-- 管理端 CRUD：创建、更新、删除、查询短链
-- 短码生成：支持可配置策略（Redis 递增 Base62 / MySQL ID Base62 / MurmurHash，含冲突重试）
-- 访问统计：记录 PV、UV（基于 `IP + User-Agent`）和最近访问时间
-- 缓存策略：
-  - 正常短链缓存（可配置 TTL）
-  - 空值缓存（防缓存穿透）
-
 ## 快速开始
 
-### 1. 环境准备
-
-- JDK 17+
-- Maven 3.8+
-- MySQL 8.x
-- Redis 6.x+
-
-### 2. 初始化数据库
+### 1. 初始化数据库
 
 在项目根目录执行：
 
@@ -45,7 +65,7 @@
 mysql -u root -p < schema.sql
 ```
 
-### 3. 配置应用
+### 2. 配置应用
 
 按本地环境修改：
 
@@ -69,13 +89,13 @@ mysql -u root -p < schema.sql
 - `shortlink.codegen.strategy`：短码生成策略，支持 `redis-base62`、`murmur-hash-base62`
 - `shortlink.codegen.murmur.length`：MurmurHash 短码长度（`murmur-hash-base62` 生效）
 
-### 4. 构建项目
+### 3. 构建项目
 
 ```bash
 mvn clean package
 ```
 
-### 5. 启动服务
+### 4. 启动服务
 
 方式一（分别启动）：
 
@@ -140,13 +160,6 @@ curl -X POST "http://localhost:8081/api/links" \
   }
 }
 ```
-
-## 数据模型
-
-建表脚本：`schema.sql`
-
-- `short_link`：短链主表，维护 `code` 和 `original_url` 映射
-- `short_link_stats`：统计表（`total_pv`、`total_uv`、`recent_access_time`）
 
 ## 设计说明
 
