@@ -126,27 +126,14 @@ mvn -pl shortlink-admin spring-boot:run
 
 ## API 概览
 
-### 1) 访问服务（`shortlink-server`）
+常用接口：
 
-- `GET /{code}`：重定向到原始链接（`302`）
+- `POST /api/links`：创建短链（管理服务，`8081`）
+- `GET /{code}`：访问短链并 `302` 重定向（访问服务，`8080`）
 
-示例：
+> 其他管理接口：`/api/links/{id}/update`、`/api/links/{id}/delete`、`/api/links/{id}`、`/api/links`
 
-```http
-GET http://localhost:8080/abc123
-```
-
-当短码不存在、已过期或被禁用时返回 `404`。
-
-### 2) 管理服务（`shortlink-admin`）
-
-- `POST /api/links`：创建短链
-- `POST /api/links/{id}/update`：更新短链
-- `POST /api/links/{id}/delete`：删除短链
-- `GET /api/links/{id}`：查询详情
-- `GET /api/links`：查询列表
-
-创建短链示例：
+创建短链请求示例：
 
 ```bash
 curl -X POST "http://localhost:8081/api/links" \
@@ -158,7 +145,14 @@ curl -X POST "http://localhost:8081/api/links" \
   }'
 ```
 
-返回结构（统一包装）：
+创建成功后，访问短链示例：
+
+```http
+GET http://localhost:8080/aB3dE9
+```
+
+短码不存在、已过期或被禁用时返回 `404`。  
+管理接口返回统一结构，示例如下：
 
 ```json
 {
