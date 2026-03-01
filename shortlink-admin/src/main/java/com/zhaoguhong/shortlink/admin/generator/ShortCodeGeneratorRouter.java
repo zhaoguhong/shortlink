@@ -1,11 +1,13 @@
 package com.zhaoguhong.shortlink.admin.generator;
 
-import com.zhaoguhong.shortlink.admin.config.ShortCodeGenerateProperties;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
 /**
  * 短链码生成器路由器。
@@ -16,16 +18,16 @@ import java.util.Map;
 @Component
 public class ShortCodeGeneratorRouter {
 
-    private final Map<ShortCodeGenerateStrategy, ShortCodeGenerator> generatorMap;
-    private final ShortCodeGenerateProperties properties;
+    private static final Logger log = LoggerFactory.getLogger(ShortCodeGeneratorRouter.class);
+    private final ShortCodeGenerator selectedGenerator;
 
     public ShortCodeGeneratorRouter(List<ShortCodeGenerator> generators,
-                                    ShortCodeGenerateProperties properties) {
-        this.properties = properties;
-        this.generatorMap = new EnumMap<>(ShortCodeGenerateStrategy.class);
-        for (ShortCodeGenerator generator : generators) {
-            this.generatorMap.put(generator.strategy(), generator);
-        }
+                                    @Value("${shortlink.codegen.strategy:redis-base62}") String strategy) {
+        ShortCodeGenerateStrategy selectedStrategy = resolveStrategy(strategy);
+        this.selectedGenerator = generators.stream()
+                .filter(generator -> generator.strategy() == selectedStrategy)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("未找到短链生成策略实现: " + selectedStrategy));
     }
 
     /**
@@ -35,11 +37,21 @@ public class ShortCodeGeneratorRouter {
      * @return 短链码
      */
     public String generate(String originalUrl) {
-        ShortCodeGenerateStrategy strategy = properties.getStrategy();
-        ShortCodeGenerator generator = generatorMap.get(strategy);
-        if (generator == null) {
-            throw new IllegalStateException("未找到短链生成策略实现: " + strategy);
+        return selectedGenerator.generate(originalUrl);
+    }
+
+    private ShortCodeGenerateStrategy resolveStrategy(String strategyValue) {
+        if (StringUtils.isBlank(strategyValue)) {
+            return ShortCodeGenerateStrategy.REDIS_BASE62;
         }
-        return generator.generate(originalUrl);
+        String normalized = strategyValue.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "redis-base62" -> ShortCodeGenerateStrategy.REDIS_BASE62;
+            case "murmur-hash-base62" -> ShortCodeGenerateStrategy.MURMUR_HASH_BASE62;
+            default -> {
+                log.error("短链生成策略配置非法: {}，已回退默认策略 redis-base62", strategyValue);
+                yield ShortCodeGenerateStrategy.REDIS_BASE62;
+            }
+        };
     }
 }

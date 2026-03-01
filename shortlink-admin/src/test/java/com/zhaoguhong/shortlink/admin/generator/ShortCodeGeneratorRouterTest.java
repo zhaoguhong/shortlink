@@ -1,6 +1,5 @@
 package com.zhaoguhong.shortlink.admin.generator;
 
-import com.zhaoguhong.shortlink.admin.config.ShortCodeGenerateProperties;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -11,15 +10,24 @@ class ShortCodeGeneratorRouterTest {
 
     @Test
     void shouldRouteByConfiguredStrategy() {
-        ShortCodeGenerateProperties properties = new ShortCodeGenerateProperties();
-        properties.setStrategy(ShortCodeGenerateStrategy.MURMUR_HASH_BASE62);
-
         ShortCodeGenerator redisGenerator = new FixedValueGenerator(ShortCodeGenerateStrategy.REDIS_BASE62, "redis-code");
         ShortCodeGenerator murmurGenerator = new FixedValueGenerator(ShortCodeGenerateStrategy.MURMUR_HASH_BASE62, "murmur-code");
 
-        ShortCodeGeneratorRouter router = new ShortCodeGeneratorRouter(List.of(redisGenerator, murmurGenerator), properties);
+        ShortCodeGeneratorRouter router =
+                new ShortCodeGeneratorRouter(List.of(redisGenerator, murmurGenerator), "murmur-hash-base62");
 
         assertThat(router.generate("https://example.com")).isEqualTo("murmur-code");
+    }
+
+    @Test
+    void shouldFallbackToRedisWhenConfiguredStrategyIsInvalid() {
+        ShortCodeGenerator redisGenerator = new FixedValueGenerator(ShortCodeGenerateStrategy.REDIS_BASE62, "redis-code");
+        ShortCodeGenerator murmurGenerator = new FixedValueGenerator(ShortCodeGenerateStrategy.MURMUR_HASH_BASE62, "murmur-code");
+
+        ShortCodeGeneratorRouter router =
+                new ShortCodeGeneratorRouter(List.of(redisGenerator, murmurGenerator), "invalid-strategy");
+
+        assertThat(router.generate("https://example.com")).isEqualTo("redis-code");
     }
 
     private static final class FixedValueGenerator implements ShortCodeGenerator {

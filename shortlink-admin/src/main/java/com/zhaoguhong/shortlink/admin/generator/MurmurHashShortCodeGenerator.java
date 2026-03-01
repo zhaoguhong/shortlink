@@ -1,6 +1,5 @@
 package com.zhaoguhong.shortlink.admin.generator;
 
-import com.zhaoguhong.shortlink.admin.config.ShortCodeGenerateProperties;
 import org.apache.commons.codec.digest.MurmurHash3;
 import org.springframework.stereotype.Component;
 
@@ -16,14 +15,9 @@ import java.util.UUID;
 @Component
 public class MurmurHashShortCodeGenerator implements ShortCodeGenerator {
 
+    private static final int DEFAULT_CODE_LENGTH = 6;
     private static final String PAD_CHAR = "0";
     private static final String NONCE_SEPARATOR = "@";
-
-    private final ShortCodeGenerateProperties properties;
-
-    public MurmurHashShortCodeGenerator(ShortCodeGenerateProperties properties) {
-        this.properties = properties;
-    }
 
     @Override
     public ShortCodeGenerateStrategy strategy() {
@@ -35,7 +29,7 @@ public class MurmurHashShortCodeGenerator implements ShortCodeGenerator {
         String seedValue = buildSeedValue(originalUrl);
         int hashValue = MurmurHash3.hash32x86(seedValue.getBytes(StandardCharsets.UTF_8));
         String base62 = Base62Codec.encode(Integer.toUnsignedLong(hashValue));
-        return normalizeLength(base62, properties.getMurmur().getLength());
+        return normalizeLength(base62, DEFAULT_CODE_LENGTH);
     }
 
     private String buildSeedValue(String originalUrl) {
