@@ -1,6 +1,6 @@
 package com.zhaoguhong.shortlink.server.service;
 
-import com.zhaoguhong.shortlink.server.entity.ShortLink;
+import com.zhaoguhong.shortlink.common.entity.ShortLink;
 
 /**
  * 短链核心服务接口。

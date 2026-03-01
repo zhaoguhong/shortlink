@@ -1,7 +1,7 @@
 package com.zhaoguhong.shortlink.server.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.zhaoguhong.shortlink.server.entity.ShortLink;
+import com.zhaoguhong.shortlink.common.entity.ShortLink;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;

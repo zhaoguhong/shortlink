@@ -1,14 +1,18 @@
-package com.zhaoguhong.shortlink.server.entity;
+package com.zhaoguhong.shortlink.common.entity;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 服务端短链实体。
+ * 短链实体类。
+ * 注意：此类被Redis缓存使用，需要实现Serializable接口。
  *
  * @author zhaoguhong
  * @date 2026/2/27
  */
-public class ShortLink {
+public class ShortLink implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long id;
     private String code;

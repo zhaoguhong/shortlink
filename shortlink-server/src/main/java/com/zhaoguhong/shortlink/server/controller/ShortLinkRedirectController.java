@@ -1,6 +1,6 @@
 package com.zhaoguhong.shortlink.server.controller;
 
-import com.zhaoguhong.shortlink.server.entity.ShortLink;
+import com.zhaoguhong.shortlink.common.entity.ShortLink;
 import com.zhaoguhong.shortlink.server.service.ShortLinkService;
 import com.zhaoguhong.shortlink.server.util.ClientIpUtils;
 import jakarta.servlet.http.HttpServletRequest;

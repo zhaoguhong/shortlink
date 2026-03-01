@@ -1,6 +1,6 @@
 package com.zhaoguhong.shortlink.admin.controller;
 
-import com.zhaoguhong.shortlink.admin.entity.ShortLink;
+import com.zhaoguhong.shortlink.common.entity.ShortLink;
 import com.zhaoguhong.shortlink.admin.generator.ShortCodeGenerator;
 import com.zhaoguhong.shortlink.admin.mapper.ShortLinkMapper;
 import com.zhaoguhong.shortlink.common.exception.BizException;

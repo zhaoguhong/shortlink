@@ -1,6 +1,6 @@
 package com.zhaoguhong.shortlink.admin.mapper;
 
-import com.zhaoguhong.shortlink.admin.entity.ShortLink;
+import com.zhaoguhong.shortlink.common.entity.ShortLink;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;

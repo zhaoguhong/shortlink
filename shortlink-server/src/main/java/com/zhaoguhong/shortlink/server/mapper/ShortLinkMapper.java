@@ -1,6 +1,6 @@
 package com.zhaoguhong.shortlink.server.mapper;
 
-import com.zhaoguhong.shortlink.server.entity.ShortLink;
+import com.zhaoguhong.shortlink.common.entity.ShortLink;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

@@ -1,6 +1,6 @@
 package com.zhaoguhong.shortlink.server.service.impl;
 
-import com.zhaoguhong.shortlink.server.entity.ShortLink;
+import com.zhaoguhong.shortlink.common.entity.ShortLink;
 import com.zhaoguhong.shortlink.server.mapper.ShortLinkMapper;
 import com.zhaoguhong.shortlink.server.service.ShortLinkService;
 import org.apache.commons.lang3.StringUtils;
