@@ -32,15 +32,14 @@ public class ShortCodeGeneratorRouter {
      * 按全局配置路由到对应策略并生成短码。
      *
      * @param originalUrl 原始链接
-     * @param retryCount 冲突重试次数
      * @return 短链码
      */
-    public String generate(String originalUrl, int retryCount) {
+    public String generate(String originalUrl) {
         ShortCodeGenerateStrategy strategy = properties.getStrategy();
         ShortCodeGenerator generator = generatorMap.get(strategy);
         if (generator == null) {
             throw new IllegalStateException("未找到短链生成策略实现: " + strategy);
         }
-        return generator.generate(originalUrl, retryCount);
+        return generator.generate(originalUrl);
     }
 }

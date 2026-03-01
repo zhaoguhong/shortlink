@@ -26,7 +26,7 @@ public class RedisBase62ShortCodeGenerator implements ShortCodeGenerator {
     }
 
     @Override
-    public String generate(String originalUrl, int retryCount) {
+    public String generate(String originalUrl) {
         Long sequenceValue = stringRedisTemplate.opsForValue().increment(REDIS_SEQUENCE_KEY);
         if (sequenceValue == null) {
             throw new IllegalStateException("Redis INCR 返回空值，无法生成短链码");

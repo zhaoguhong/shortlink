@@ -8,6 +8,8 @@ import com.zhaoguhong.shortlink.common.util.UrlValidationUtils;
 import com.zhaoguhong.shortlink.common.web.ApiResponse;
 import jakarta.validation.Valid;
 import org.apache.commons.lang3.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,11 +25,12 @@ import java.util.List;
 @RequestMapping("/api/links")
 public class ShortLinkController {
 
+    private static final Logger log = LoggerFactory.getLogger(ShortLinkController.class);
     private static final int DEFAULT_LINK_STATUS = 1;
     private static final int ERROR_CODE_BAD_REQUEST = 400;
     private static final int ERROR_CODE_NOT_FOUND = 404;
     private static final int ERROR_CODE_INTERNAL = 500;
-    private static final int CODE_GENERATE_MAX_RETRY = 8;
+    private static final int CODE_GENERATE_MAX_RETRY = 3;
 
     private final ShortLinkMapper shortLinkMapper;
     private final ShortCodeGeneratorRouter shortCodeGeneratorRouter;
@@ -91,12 +94,13 @@ public class ShortLinkController {
 
     private void createWithGeneratedCode(ShortLink link) {
         for (int i = 0; i < CODE_GENERATE_MAX_RETRY; i++) {
-            link.setCode(shortCodeGeneratorRouter.generate(link.getOriginalUrl(), i));
+            link.setCode(shortCodeGeneratorRouter.generate(link.getOriginalUrl()));
             try {
                 shortLinkMapper.insert(link);
                 return;
             } catch (DuplicateKeyException ignored) {
                 // 短码冲突时重试，避免唯一索引冲突导致创建失败。
+                log.warn("短链码 {} 冲突，正在重试...", link.getCode());
             }
         }
         throw new BizException(ERROR_CODE_INTERNAL, "短链码生成失败，请稍后重试");

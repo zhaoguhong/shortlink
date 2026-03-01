@@ -19,7 +19,7 @@ class ShortCodeGeneratorRouterTest {
 
         ShortCodeGeneratorRouter router = new ShortCodeGeneratorRouter(List.of(redisGenerator, murmurGenerator), properties);
 
-        assertThat(router.generate("https://example.com", 0)).isEqualTo("murmur-code");
+        assertThat(router.generate("https://example.com")).isEqualTo("murmur-code");
     }
 
     private static final class FixedValueGenerator implements ShortCodeGenerator {
@@ -38,7 +38,7 @@ class ShortCodeGeneratorRouterTest {
         }
 
         @Override
-        public String generate(String originalUrl, int retryCount) {
+        public String generate(String originalUrl) {
             return code;
         }
     }

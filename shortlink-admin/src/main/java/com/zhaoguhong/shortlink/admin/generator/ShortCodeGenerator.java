@@ -19,8 +19,7 @@ public interface ShortCodeGenerator {
      * 生成短链码。
      *
      * @param originalUrl 原始链接
-     * @param retryCount 冲突重试次数（从 0 开始）
      * @return Base62 等编码后的短链码
      */
-    String generate(String originalUrl, int retryCount);
+    String generate(String originalUrl);
 }

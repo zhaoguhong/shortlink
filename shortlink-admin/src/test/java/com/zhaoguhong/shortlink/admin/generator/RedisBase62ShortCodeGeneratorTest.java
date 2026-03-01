@@ -27,7 +27,7 @@ class RedisBase62ShortCodeGeneratorTest {
 
         RedisBase62ShortCodeGenerator generator = new RedisBase62ShortCodeGenerator(stringRedisTemplate);
 
-        String result = generator.generate("https://example.com", 0);
+        String result = generator.generate("https://example.com");
 
         assertThat(result).isEqualTo("11");
         assertThat(generator.strategy()).isEqualTo(ShortCodeGenerateStrategy.REDIS_BASE62);
