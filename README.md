@@ -7,7 +7,25 @@
 短链（Short URL）是把一个很长的原始链接压缩成一个更短、可读性更好的链接。  
 用户访问短链时，服务端会把它重定向到原始地址，同时可以记录访问数据（如 PV、UV）。
 
+常见使用场景包括：
+
+- 分享链接时减少长度，提升美观和可传播性
+- 在短信、海报、社媒等场景节省字符空间
+- 在不暴露原始链接的情况下统一管理跳转目标
+- 统计访问效果（例如访问量、访客数、最近访问时间）
+
 这个项目是一个基于 **Spring Boot 3 + MyBatis + MySQL + Redis** 的短链系统示例，采用多模块 Maven 结构，包含短链创建、重定向和访问统计能力。
+
+## 目录
+
+- [核心能力与亮点](#核心能力与亮点)
+- [架构概览](#架构概览)
+- [模块说明](#模块说明)
+- [快速开始](#快速开始)
+- [API 概览](#api-概览)
+- [设计说明](#设计说明)
+- [后续规划（Roadmap）](#后续规划roadmap)
+- [License](#license)
 
 ## 核心能力与亮点
 
@@ -39,15 +57,6 @@ shortlink-server (8080)
   `-- 302 重定向到 originalUrl
 ```
 
-## 什么是短链
-
-常见的短链使用场景包括：
-
-- 分享链接时减少长度，提升美观和可传播性
-- 在短信、海报、社媒等场景节省字符空间
-- 在不暴露原始链接的情况下统一管理跳转目标
-- 统计访问效果（例如访问量、访客数、最近访问时间）
-
 ## 模块说明
 
 - `shortlink-server`：短链访问服务（默认端口 `8080`）
@@ -72,7 +81,8 @@ mysql -u root -p < schema.sql
 - `shortlink-server/src/main/resources/application.yml`
 - `shortlink-admin/src/main/resources/application.yml`
 
-当前默认配置（代码仓库内）：
+<details>
+<summary>查看默认配置（示例）</summary>
 
 - MySQL URL：`jdbc:mysql://localhost:3306/shortlink?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai`
 - MySQL 用户名：`root`
@@ -88,6 +98,9 @@ mysql -u root -p < schema.sql
 
 - `shortlink.codegen.strategy`：短码生成策略，支持 `redis-base62`、`murmur-hash-base62`
 - `shortlink.codegen.murmur.length`：MurmurHash 短码长度（`murmur-hash-base62` 生效）
+</details>
+
+> 提示：以上账号密码仅为本地开发示例，请按你的环境修改，避免直接用于生产环境。
 
 ### 3. 构建项目
 
@@ -168,7 +181,7 @@ curl -X POST "http://localhost:8081/api/links" \
 - UV 使用按天 Set 统计，键过期时间默认 7 天
 - 目前统计数据主要落在 Redis，后续可通过任务回刷数据库
 
-## Roadmap
+## 后续规划（Roadmap）
 
 - [x] 自动生成短链码（支持 Redis Base62 / MurmurHash 策略化配置）
 - [x] 短链缓存与空值缓存
