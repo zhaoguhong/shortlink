@@ -21,6 +21,8 @@ mybatis:
 
 shortlink:
   codegen:
+    # 可选值: redis-base62 / murmur-hash-base62
     strategy: ${SHORTLINK_CODEGEN_STRATEGY:redis-base62}
     murmur:
+      # 仅在 strategy = murmur-hash-base62 时生效
       length: ${SHORTLINK_CODEGEN_MURMUR_LENGTH:8}

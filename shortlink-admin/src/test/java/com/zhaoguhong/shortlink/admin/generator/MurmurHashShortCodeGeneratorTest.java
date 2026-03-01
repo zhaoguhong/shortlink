@@ -19,6 +19,6 @@ class MurmurHashShortCodeGeneratorTest {
         assertThat(first).hasSize(8);
         assertThat(second).hasSize(8);
         assertThat(second).isNotEqualTo(first);
-        assertThat(generator.strategy()).isEqualTo(ShortCodeGenerateStrategy.MURMUR_HASH);
+        assertThat(generator.strategy()).isEqualTo(ShortCodeGenerateStrategy.MURMUR_HASH_BASE62);
     }
 }

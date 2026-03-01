@@ -1,7 +1,7 @@
 package com.zhaoguhong.shortlink.admin.generator;
 
-import org.springframework.stereotype.Component;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
 
 /**
  * Redis 递增序列 + Base62 短链码生成器。
@@ -10,13 +10,13 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  * @date 2026/3/1
  */
 @Component
-public class Base62ShortCodeGenerator implements ShortCodeGenerator {
+public class RedisBase62ShortCodeGenerator implements ShortCodeGenerator {
 
     private static final String REDIS_SEQUENCE_KEY = "shortlink:codegen:sequence";
 
     private final StringRedisTemplate stringRedisTemplate;
 
-    public Base62ShortCodeGenerator(StringRedisTemplate stringRedisTemplate) {
+    public RedisBase62ShortCodeGenerator(StringRedisTemplate stringRedisTemplate) {
         this.stringRedisTemplate = stringRedisTemplate;
     }
 

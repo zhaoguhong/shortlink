@@ -8,7 +8,7 @@ import org.springframework.data.redis.core.ValueOperations;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class Base62ShortCodeGeneratorTest {
+class RedisBase62ShortCodeGeneratorTest {
 
     private StringRedisTemplate stringRedisTemplate;
     private ValueOperations<String, String> valueOperations;
@@ -25,7 +25,7 @@ class Base62ShortCodeGeneratorTest {
     void shouldGenerateBase62CodeFromRedisIncrement() {
         Mockito.when(valueOperations.increment("shortlink:codegen:sequence")).thenReturn(63L);
 
-        Base62ShortCodeGenerator generator = new Base62ShortCodeGenerator(stringRedisTemplate);
+        RedisBase62ShortCodeGenerator generator = new RedisBase62ShortCodeGenerator(stringRedisTemplate);
 
         String result = generator.generate("https://example.com", 0);
 

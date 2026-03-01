@@ -12,10 +12,10 @@ class ShortCodeGeneratorRouterTest {
     @Test
     void shouldRouteByConfiguredStrategy() {
         ShortCodeGenerateProperties properties = new ShortCodeGenerateProperties();
-        properties.setStrategy(ShortCodeGenerateStrategy.MURMUR_HASH);
+        properties.setStrategy(ShortCodeGenerateStrategy.MURMUR_HASH_BASE62);
 
         ShortCodeGenerator redisGenerator = new FixedValueGenerator(ShortCodeGenerateStrategy.REDIS_BASE62, "redis-code");
-        ShortCodeGenerator murmurGenerator = new FixedValueGenerator(ShortCodeGenerateStrategy.MURMUR_HASH, "murmur-code");
+        ShortCodeGenerator murmurGenerator = new FixedValueGenerator(ShortCodeGenerateStrategy.MURMUR_HASH_BASE62, "murmur-code");
 
         ShortCodeGeneratorRouter router = new ShortCodeGeneratorRouter(List.of(redisGenerator, murmurGenerator), properties);
 

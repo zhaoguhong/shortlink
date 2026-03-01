@@ -22,7 +22,7 @@
 
 - 短链重定向：`GET /{code}` 返回 `302 Found`
 - 管理端 CRUD：创建、更新、删除、查询短链
-- 短码生成：支持可配置策略（Redis 递增 Base62 / MurmurHash，含冲突重试）
+- 短码生成：支持可配置策略（Redis 递增 Base62 / MySQL ID Base62 / MurmurHash，含冲突重试）
 - 访问统计：记录 PV、UV（基于 `IP + User-Agent`）和最近访问时间
 - 缓存策略：
   - 正常短链缓存（可配置 TTL）
@@ -66,8 +66,8 @@ mysql -u root -p < schema.sql
 
 `shortlink-admin` 额外短码生成参数：
 
-- `shortlink.codegen.strategy`：短码生成策略，支持 `redis-base62`、`murmurhash`
-- `shortlink.codegen.murmur.length`：MurmurHash 短码长度（`murmurhash` 生效）
+- `shortlink.codegen.strategy`：短码生成策略，支持 `redis-base62`、`murmur-hash-base62`
+- `shortlink.codegen.murmur.length`：MurmurHash 短码长度（`murmur-hash-base62` 生效）
 
 ### 4. 构建项目
 

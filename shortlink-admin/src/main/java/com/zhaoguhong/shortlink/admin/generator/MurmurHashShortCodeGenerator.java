@@ -26,7 +26,7 @@ public class MurmurHashShortCodeGenerator implements ShortCodeGenerator {
 
     @Override
     public ShortCodeGenerateStrategy strategy() {
-        return ShortCodeGenerateStrategy.MURMUR_HASH;
+        return ShortCodeGenerateStrategy.MURMUR_HASH_BASE62;
     }
 
     @Override

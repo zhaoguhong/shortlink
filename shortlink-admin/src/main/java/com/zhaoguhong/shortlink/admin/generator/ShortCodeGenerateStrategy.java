@@ -16,5 +16,5 @@ public enum ShortCodeGenerateStrategy {
     /**
      * 基于 MurmurHash 的固定长度短码。
      */
-    MURMUR_HASH
+    MURMUR_HASH_BASE62
 }
