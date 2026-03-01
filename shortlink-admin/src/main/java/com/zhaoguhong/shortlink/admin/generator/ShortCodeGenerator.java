@@ -9,9 +9,18 @@ package com.zhaoguhong.shortlink.admin.generator;
 public interface ShortCodeGenerator {
 
     /**
+     * 当前生成器支持的策略类型。
+     *
+     * @return 策略类型
+     */
+    ShortCodeGenerateStrategy strategy();
+
+    /**
      * 生成短链码。
      *
+     * @param originalUrl 原始链接
+     * @param retryCount 冲突重试次数（从 0 开始）
      * @return Base62 等编码后的短链码
      */
-    String generate();
+    String generate(String originalUrl, int retryCount);
 }

@@ -1,31 +1,36 @@
 package com.zhaoguhong.shortlink.admin.generator;
 
 import org.springframework.stereotype.Component;
-
-import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
- * Base62 短链码生成器。
+ * Redis 递增序列 + Base62 短链码生成器。
  *
  * @author zhaoguhong
- * @date 2026/2/27
+ * @date 2026/3/1
  */
 @Component
 public class Base62ShortCodeGenerator implements ShortCodeGenerator {
 
-    private static final String BASE62_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    private static final String REDIS_SEQUENCE_KEY = "shortlink:codegen:sequence";
 
-    private final AtomicLong sequence = new AtomicLong(System.currentTimeMillis());
+    private final StringRedisTemplate stringRedisTemplate;
+
+    public Base62ShortCodeGenerator(StringRedisTemplate stringRedisTemplate) {
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
 
     @Override
-    public String generate() {
-        long value = sequence.incrementAndGet();
-        StringBuilder builder = new StringBuilder();
-        do {
-            int index = (int) (value % BASE62_ALPHABET.length());
-            builder.append(BASE62_ALPHABET.charAt(index));
-            value /= BASE62_ALPHABET.length();
-        } while (value > 0);
-        return builder.reverse().toString();
+    public ShortCodeGenerateStrategy strategy() {
+        return ShortCodeGenerateStrategy.REDIS_BASE62;
+    }
+
+    @Override
+    public String generate(String originalUrl, int retryCount) {
+        Long sequenceValue = stringRedisTemplate.opsForValue().increment(REDIS_SEQUENCE_KEY);
+        if (sequenceValue == null) {
+            throw new IllegalStateException("Redis INCR 返回空值，无法生成短链码");
+        }
+        return Base62Codec.encode(sequenceValue);
     }
 }

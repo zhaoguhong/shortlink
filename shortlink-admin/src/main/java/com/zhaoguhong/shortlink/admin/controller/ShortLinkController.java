@@ -1,7 +1,7 @@
 package com.zhaoguhong.shortlink.admin.controller;
 
 import com.zhaoguhong.shortlink.common.entity.ShortLink;
-import com.zhaoguhong.shortlink.admin.generator.ShortCodeGenerator;
+import com.zhaoguhong.shortlink.admin.generator.ShortCodeGeneratorRouter;
 import com.zhaoguhong.shortlink.admin.mapper.ShortLinkMapper;
 import com.zhaoguhong.shortlink.common.exception.BizException;
 import com.zhaoguhong.shortlink.common.util.UrlValidationUtils;
@@ -30,11 +30,11 @@ public class ShortLinkController {
     private static final int CODE_GENERATE_MAX_RETRY = 8;
 
     private final ShortLinkMapper shortLinkMapper;
-    private final ShortCodeGenerator shortCodeGenerator;
+    private final ShortCodeGeneratorRouter shortCodeGeneratorRouter;
 
-    public ShortLinkController(ShortLinkMapper shortLinkMapper, ShortCodeGenerator shortCodeGenerator) {
+    public ShortLinkController(ShortLinkMapper shortLinkMapper, ShortCodeGeneratorRouter shortCodeGeneratorRouter) {
         this.shortLinkMapper = shortLinkMapper;
-        this.shortCodeGenerator = shortCodeGenerator;
+        this.shortCodeGeneratorRouter = shortCodeGeneratorRouter;
     }
 
     @PostMapping
@@ -91,7 +91,7 @@ public class ShortLinkController {
 
     private void createWithGeneratedCode(ShortLink link) {
         for (int i = 0; i < CODE_GENERATE_MAX_RETRY; i++) {
-            link.setCode(shortCodeGenerator.generate());
+            link.setCode(shortCodeGeneratorRouter.generate(link.getOriginalUrl(), i));
             try {
                 shortLinkMapper.insert(link);
                 return;

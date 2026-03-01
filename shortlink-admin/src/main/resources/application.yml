@@ -18,3 +18,9 @@ spring:
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
+
+shortlink:
+  codegen:
+    strategy: ${SHORTLINK_CODEGEN_STRATEGY:redis-base62}
+    murmur:
+      length: ${SHORTLINK_CODEGEN_MURMUR_LENGTH:8}
